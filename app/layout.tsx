@@ -19,13 +19,14 @@ const mono = Spline_Sans_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "GlowDesk",
-  description: "Consultation, skin analysis, and client records for beauty professionals.",
+  title: "Glowdesk — Try the look",
+  description:
+    "A camera-first beauty discovery studio for trying creator-made looks and exploring products.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={`${display.variable} ${body.variable} ${mono.variable} font-body`}>
         {children}
       </body>
