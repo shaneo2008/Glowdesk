@@ -1722,7 +1722,7 @@ function Onboarding({
           alt=""
           fill
           priority
-          sizes="100vw"
+          sizes="(min-width: 768px) 54vw, 100vw"
         />
         <div
           className="onboarding-colour"

@@ -2307,6 +2307,7 @@ input[type="range"]::-webkit-slider-thumb {
     display: grid;
     width: 44px;
     height: 44px;
+    margin-bottom: 48px;
     place-items: center;
     border: 1px solid var(--line);
     border-radius: 50%;
