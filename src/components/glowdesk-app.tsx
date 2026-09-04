@@ -287,6 +287,7 @@ export default function GlowdeskApp() {
             alt=""
             width={44}
             height={44}
+            style={{ width: 44, height: 44 }}
           />
         </button>
       </aside>
@@ -302,6 +303,7 @@ export default function GlowdeskApp() {
             alt=""
             width={34}
             height={34}
+            style={{ width: 34, height: 34 }}
           />
           <span>
             <strong>{featuredProfessional.name}</strong>
@@ -517,6 +519,10 @@ function ProfessionalSignature({ compact = false }: { compact?: boolean }) {
         alt=""
         width={compact ? 46 : 64}
         height={compact ? 46 : 64}
+        style={{
+          width: compact ? 46 : 64,
+          height: compact ? 46 : 64,
+        }}
       />
       <span>
         <small>{featuredProfessional.studioName}</small>
@@ -2187,6 +2193,7 @@ function ProductSheet({
               alt=""
               width={42}
               height={42}
+              style={{ width: 42, height: 42 }}
             />
             <span>
               <small>Available from Maya&apos;s preferred catalog</small>
@@ -2290,9 +2297,30 @@ function BottomSheet({
   wide?: boolean;
   children: ReactNode;
 }) {
+  const dialogRef = useRef<HTMLElement>(null);
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") {
+        onClose();
+        return;
+      }
+      if (event.key !== "Tab") return;
+
+      const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), [href], input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      );
+      if (!focusable?.length) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
@@ -2300,12 +2328,13 @@ function BottomSheet({
 
   return (
     <div className="sheet-layer" role="presentation">
-      <button
+      <div
         className="sheet-backdrop"
         onClick={onClose}
-        aria-label="Close dialog"
+        aria-hidden="true"
       />
       <section
+        ref={dialogRef}
         className={cx("bottom-sheet", wide && "bottom-sheet-wide")}
         role="dialog"
         aria-modal="true"

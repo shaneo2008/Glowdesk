@@ -3720,7 +3720,6 @@ input[type="range"]::-webkit-slider-thumb {
   }
 
   .workspace-header {
-    grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
     align-items: end;
   }
 
@@ -3746,6 +3745,12 @@ input[type="range"]::-webkit-slider-thumb {
 
   .recommendation-actions {
     grid-template-columns: 0.7fr 1.3fr;
+  }
+}
+
+@media (min-width: 980px) {
+  .workspace-header {
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
   }
 }
 
