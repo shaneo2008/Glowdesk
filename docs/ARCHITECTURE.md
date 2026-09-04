@@ -2,7 +2,7 @@
 
 ## Stack (opinionated defaults — change in DECISIONS.md if you disagree)
 
-- **Next.js 15 (App Router) + TypeScript** — one deployable, PWA-capable so practitioners use
+- **Next.js 16 (App Router) + TypeScript** — one deployable, PWA-capable so practitioners use
   it on a phone/tablet without app-store friction. Native app is a later decision, not a day-1 one.
 - **Supabase** — Postgres + Auth + Storage + RLS. Multi-tenancy via `tenant_id` on every table
   with row-level security. Face images in Storage with per-tenant buckets/paths.
@@ -13,9 +13,17 @@
 
 ## Tenancy model
 
-tenant (practitioner business) → users (practitioner, later: staff) → clients → consultations
-→ scans / recommendations / bookings. White-labelling = tenant-level branding config rendered
-into the client-facing surfaces. One codebase, one deployment.
+tenant (professional or studio business) → users (owner, later: staff) → clients →
+consultations → scans / recommendations / bookings. The default client surface is co-branded:
+the professional's identity is primary with a restrained "powered by Glowdesk" trust mark.
+Tenant-level branding config controls logo, colours, services, enabled product brands, and
+public profile slug. Custom domains and fully hidden Glowdesk branding are premium options
+after the pilot. One codebase, one deployment.
+
+Clients enter through a professional's public link and remain guests while browsing and
+trying looks. Authentication is deferred until they send, save, message, or need to return.
+The consultation is the shared object connecting the client-facing studio to the
+professional inbox and recommendation builder.
 
 ## Vendor abstraction (the important bit)
 

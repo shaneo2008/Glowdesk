@@ -1,14 +1,21 @@
 "use client";
 
 import {
+  BadgeCheck,
   Bookmark,
+  BriefcaseBusiness,
   Camera,
+  CalendarDays,
+  Check,
   ChevronDown,
   ChevronRight,
-  CircleUserRound,
+  ClipboardList,
+  Clock3,
   Heart,
   ImagePlus,
   Info,
+  Inbox,
+  Link2,
   Menu,
   MessageCircle,
   MoreHorizontal,
@@ -16,12 +23,13 @@ import {
   RotateCcw,
   ScanFace,
   Search,
+  Send,
   Share2,
+  ShieldCheck,
   ShoppingBag,
   SlidersHorizontal,
   Sparkles,
   Star,
-  UserRound,
   WandSparkles,
   X,
 } from "lucide-react";
@@ -47,8 +55,15 @@ import {
   type Product,
   type ProductCategory,
 } from "@/data/catalog";
+import {
+  demoConsultations,
+  featuredProfessional,
+  type ConsultationBrief,
+  type ConsultationStatus,
+  type Service,
+} from "@/data/practice";
 
-type View = "camera" | "discover" | "saved";
+type View = "camera" | "discover" | "consultation" | "professional";
 type TryMode = "makeup" | "skincare" | "looks";
 type SavedState = {
   looks: string[];
@@ -64,23 +79,23 @@ const DEFAULT_SAVED: SavedState = {
 
 const onboarding = [
   {
+    eyebrow: "Maya's digital studio",
+    title: "Start the conversation visually.",
+    copy: "Explore the looks, services, and products Maya has curated for her clients.",
+    image: "/images/look-sudan.jpg",
+    accent: "#a9bea8",
+  },
+  {
     eyebrow: "Your face, your edit",
-    title: "Try beauty in the moment.",
-    copy: "Explore colour and curated looks on your own photo — private by default.",
+    title: "Try it before you explain it.",
+    copy: "Use your own photo to explore colour, skincare goals, and complete looks.",
     image: "/images/look-afro.jpg",
     accent: "#ff6c75",
   },
   {
-    eyebrow: "Creator made",
-    title: "Find a look. Make it yours.",
-    copy: "Discover artist-built edits, see every product, then remix the mood.",
-    image: "/images/look-neon.jpg",
-    accent: "#a89cff",
-  },
-  {
-    eyebrow: "A softer forecast",
-    title: "Preview a skincare journey.",
-    copy: "Explore subtle, clearly labeled visual simulations over time — never promises.",
+    eyebrow: "A better consultation",
+    title: "Send Maya what you mean.",
+    copy: "Collect your favourites into a private visual brief before your appointment.",
     image: "/images/look-freckled.jpg",
     accent: "#ffca71",
   },
@@ -168,6 +183,8 @@ export default function GlowdeskApp() {
   const [activeProductId, setActiveProductId] = useState("lip-ember");
   const [productSheet, setProductSheet] = useState<Product | null>(null);
   const [creatorSheet, setCreatorSheet] = useState<Creator | null>(null);
+  const [consultationSheetOpen, setConsultationSheetOpen] = useState(false);
+  const [consultationSent, setConsultationSent] = useState(false);
   const [toast, setToast] = useState("");
   const { saved, toggleLook, toggleProduct, addRecent } = useSavedState();
 
@@ -183,6 +200,9 @@ export default function GlowdeskApp() {
         "glowdesk-onboarding",
       );
       if (hasSeenOnboarding) setOnboardingStep(null);
+      if (window.localStorage.getItem("glowdesk-consultation-sent")) {
+        setConsultationSent(true);
+      }
     }, 0);
     return () => window.clearTimeout(timeout);
   }, []);
@@ -245,33 +265,55 @@ export default function GlowdeskApp() {
             onClick={() => setView("discover")}
           />
           <NavButton
-            active={view === "saved"}
-            icon={<Bookmark />}
-            label="Saved"
-            onClick={() => setView("saved")}
+            active={view === "consultation"}
+            icon={<ClipboardList />}
+            label="Brief"
+            onClick={() => setView("consultation")}
+          />
+          <NavButton
+            active={view === "professional"}
+            icon={<BriefcaseBusiness />}
+            label="Pro"
+            onClick={() => setView("professional")}
           />
         </nav>
         <button
           className="rail-profile"
-          onClick={() => setToast("Your profile is ready for a future account")}
-          aria-label="Open profile"
+          onClick={() => setView("discover")}
+          aria-label={`Open ${featuredProfessional.name}'s storefront`}
         >
-          <CircleUserRound />
+          <Image
+            src={featuredProfessional.image}
+            alt=""
+            width={44}
+            height={44}
+            style={{ width: 44, height: 44 }}
+          />
         </button>
       </aside>
 
       <header className="mobile-header">
         <button
-          className="wordmark"
-          onClick={() => setView("camera")}
-          aria-label="Glowdesk home"
+          className="mobile-professional"
+          onClick={() => setView("discover")}
+          aria-label={`Open ${featuredProfessional.name}'s storefront`}
         >
-          glow<span>desk</span>
+          <Image
+            src={featuredProfessional.image}
+            alt=""
+            width={34}
+            height={34}
+            style={{ width: 34, height: 34 }}
+          />
+          <span>
+            <strong>{featuredProfessional.name}</strong>
+            <small>Powered by glowdesk</small>
+          </span>
         </button>
         <button
           className="icon-button quiet"
           aria-label="Open menu"
-          onClick={() => setToast("Everything you need is in the bottom bar")}
+          onClick={() => setView("professional")}
         >
           <Menu />
         </button>
@@ -307,13 +349,23 @@ export default function GlowdeskApp() {
             notify={setToast}
           />
         )}
-        {view === "saved" && (
-          <SavedLibrary
+        {view === "consultation" && (
+          <ConsultationBuilder
             saved={saved}
             tryLook={tryLook}
             openProduct={setProductSheet}
             toggleLook={toggleLook}
             toggleProduct={toggleProduct}
+            sent={consultationSent}
+            onReview={() => setConsultationSheetOpen(true)}
+            onBrowse={() => setView("discover")}
+          />
+        )}
+        {view === "professional" && (
+          <ProfessionalWorkspace
+            notify={setToast}
+            openProduct={setProductSheet}
+            onClientPreview={() => setView("discover")}
           />
         )}
       </main>
@@ -339,15 +391,16 @@ export default function GlowdeskApp() {
           <Camera />
         </button>
         <NavButton
-          active={view === "saved"}
-          icon={<Bookmark />}
-          label="Saved"
-          onClick={() => setView("saved")}
+          active={view === "consultation"}
+          icon={<ClipboardList />}
+          label="Brief"
+          onClick={() => setView("consultation")}
         />
         <NavButton
-          icon={<UserRound />}
-          label="You"
-          onClick={() => setToast("Profiles are coming next")}
+          active={view === "professional"}
+          icon={<BriefcaseBusiness />}
+          label="Pro"
+          onClick={() => setView("professional")}
         />
       </nav>
 
@@ -410,6 +463,19 @@ export default function GlowdeskApp() {
         />
       )}
 
+      {consultationSheetOpen && (
+        <ConsultationSheet
+          saved={saved}
+          onClose={() => setConsultationSheetOpen(false)}
+          onSend={() => {
+            window.localStorage.setItem("glowdesk-consultation-sent", "true");
+            setConsultationSheetOpen(false);
+            setConsultationSent(true);
+            setToast(`Brief sent securely to ${featuredProfessional.name}`);
+          }}
+        />
+      )}
+
       <div
         className={cx("toast", toast && "toast-visible")}
         role="status"
@@ -442,6 +508,31 @@ function NavButton({
       {icon}
       <span>{label}</span>
     </button>
+  );
+}
+
+function ProfessionalSignature({ compact = false }: { compact?: boolean }) {
+  return (
+    <div className={cx("professional-signature", compact && "compact")}>
+      <Image
+        src={featuredProfessional.image}
+        alt=""
+        width={compact ? 46 : 64}
+        height={compact ? 46 : 64}
+        style={{
+          width: compact ? 46 : 64,
+          height: compact ? 46 : 64,
+        }}
+      />
+      <span>
+        <small>{featuredProfessional.studioName}</small>
+        <strong>
+          {featuredProfessional.name}
+          <BadgeCheck aria-label="Verified Glowdesk professional" />
+        </strong>
+        <em>{featuredProfessional.role}</em>
+      </span>
+    </div>
   );
 }
 
@@ -598,11 +689,12 @@ function CameraExperience({
   return (
     <section className="studio-layout">
       <div className="studio-copy">
-        <p className="eyebrow">Private try-on studio</p>
-        <h1>Make the mirror<br />more interesting.</h1>
+        <ProfessionalSignature compact />
+        <p className="eyebrow">Your private consultation studio</p>
+        <h1>Show Maya<br />what you mean.</h1>
         <p>
-          Explore a look on your own face, then follow the products and artists
-          behind it.
+          Try a look, capture the ideas that feel right, and send a visual brief
+          before your appointment.
         </p>
         <div className="desktop-studio-meta">
           <span><ScanFace /> Processed on this device</span>
@@ -690,14 +782,14 @@ function CameraExperience({
             />
             <ActionButton
               icon={<Heart />}
-              label="Save"
+              label="Brief"
               active={saved.looks.includes(activeLook.id)}
               onClick={() => {
                 toggleLook(activeLook.id);
                 notify(
                   saved.looks.includes(activeLook.id)
-                    ? "Look removed"
-                    : "Look saved",
+                    ? "Removed from your brief"
+                    : "Added to your consultation brief",
                 );
               }}
             />
@@ -796,8 +888,11 @@ function CameraExperience({
                 onClick={() => {
                   setCapturing(true);
                   addRecent(activeLook.id);
+                  if (!saved.looks.includes(activeLook.id)) {
+                    toggleLook(activeLook.id);
+                  }
                   window.setTimeout(() => setCapturing(false), 500);
-                  notify("Preview captured to recent tries");
+                  notify("Preview added to your consultation");
                 }}
               >
                 <span />
@@ -850,7 +945,7 @@ function CameraExperience({
 
       <aside className="studio-detail">
         <div className="detail-header">
-          <span className="eyebrow">Current edit</span>
+          <span className="eyebrow">Maya&apos;s current edit</span>
           <button
             className="icon-button quiet"
             aria-label="Save current product"
@@ -904,8 +999,8 @@ function CameraExperience({
           View the full edit
         </button>
         <p className="affiliate-note">
-          Some future shop links may earn the creator a commission. Your price
-          stays the same.
+          Maya may earn commission from recommended products. Your price stays
+          the same.
         </p>
       </aside>
 
@@ -1146,10 +1241,41 @@ function DiscoverFeed({
 
   return (
     <section className="discover-page">
+      <div className="storefront-hero">
+        <div className="storefront-profile">
+          <ProfessionalSignature />
+          <p>{featuredProfessional.bio}</p>
+          <div className="storefront-meta">
+            <span>{featuredProfessional.location}</span>
+            <span>{featuredProfessional.handle}</span>
+          </div>
+          <button
+            className="primary-button"
+            onClick={() => notify("Booking handoff previewed — no appointment made")}
+          >
+            <CalendarDays />
+            Book with Maya
+          </button>
+        </div>
+        <div className="service-strip">
+          {featuredProfessional.services.map((service) => (
+            <article key={service.id}>
+              <span>{service.duration}</span>
+              <h2>{service.name}</h2>
+              <p>{service.description}</p>
+              <strong>{service.price}</strong>
+            </article>
+          ))}
+        </div>
+        <p className="powered-mark">
+          <Sparkles />
+          Professional storefront powered by glowdesk
+        </p>
+      </div>
       <header className="page-heading">
         <div>
-          <p className="eyebrow">Made by artists</p>
-          <h1>Looks worth<br />stealing.</h1>
+          <p className="eyebrow">Curated for Maya&apos;s clients</p>
+          <h1>Find the words<br />in a look.</h1>
         </div>
         <button
           className="icon-button outlined"
@@ -1212,12 +1338,12 @@ function DiscoverFeed({
                 />
                 <ActionButton
                   icon={<MessageCircle />}
-                  label="Ask"
-                  onClick={() => notify("Creator Q&A is coming soon")}
+                  label="Ask Maya"
+                  onClick={() => notify("Added a note prompt for Maya")}
                 />
               </div>
               <div className="feed-content">
-                <p className="eyebrow">{look.mood} / editor&apos;s pick</p>
+                <p className="eyebrow">{look.mood} / selected by Maya</p>
                 <h2>{look.title}</h2>
                 <p>{look.caption}</p>
                 <div className="product-stack">
@@ -1239,7 +1365,7 @@ function DiscoverFeed({
                     onClick={() => tryLook(look.id)}
                   >
                     <WandSparkles />
-                    Try this look
+                    Try for my brief
                   </button>
                   <button
                     className="icon-button glass"
@@ -1258,18 +1384,24 @@ function DiscoverFeed({
   );
 }
 
-function SavedLibrary({
+function ConsultationBuilder({
   saved,
   tryLook,
   openProduct,
   toggleLook,
   toggleProduct,
+  sent,
+  onReview,
+  onBrowse,
 }: {
   saved: SavedState;
   tryLook: (id: string) => void;
   openProduct: (product: Product) => void;
   toggleLook: (id: string) => void;
   toggleProduct: (id: string) => void;
+  sent: boolean;
+  onReview: () => void;
+  onBrowse: () => void;
 }) {
   const [tab, setTab] = useState<"looks" | "products" | "recent">("looks");
   const savedLooks = saved.looks
@@ -1283,17 +1415,51 @@ function SavedLibrary({
     .filter((product): product is Product => Boolean(product));
 
   return (
-    <section className="saved-page">
+    <section className="saved-page consultation-page">
       <header className="page-heading saved-heading">
         <div>
-          <p className="eyebrow">Your beauty drawer</p>
-          <h1>Keep the<br />good ones.</h1>
+          <p className="eyebrow">Appointment prep</p>
+          <h1>Your visual<br />consultation.</h1>
         </div>
         <div className="saved-count">
           <strong>{saved.looks.length + saved.products.length}</strong>
-          <span>saved</span>
+          <span>ideas</span>
         </div>
       </header>
+      <div className="brief-intro">
+        <ProfessionalSignature compact />
+        <div>
+          <p className="eyebrow">A clearer starting point</p>
+          <h2>Show Maya the finish, feeling, and products you have in mind.</h2>
+          <p>
+            Your selected looks and captures become a private brief Maya can
+            review before your appointment.
+          </p>
+        </div>
+        {sent ? (
+          <div className="brief-sent">
+            <Check />
+            <span>
+              <strong>Brief sent</strong>
+              <small>Maya will review it before your appointment.</small>
+            </span>
+          </div>
+        ) : (
+          <button
+            className="primary-button"
+            onClick={onReview}
+            disabled={!saved.looks.length}
+          >
+            <Send />
+            Review and send
+          </button>
+        )}
+      </div>
+      <ol className="brief-steps">
+        <li className="active"><span>1</span>Collect inspiration</li>
+        <li className={saved.looks.length ? "active" : undefined}><span>2</span>Add appointment notes</li>
+        <li className={sent ? "active" : undefined}><span>3</span>Send securely</li>
+      </ol>
       <div className="saved-tabs" role="tablist" aria-label="Saved content">
         {(["looks", "products", "recent"] as const).map((item) => (
           <button
@@ -1303,7 +1469,7 @@ function SavedLibrary({
             className={tab === item ? "active" : undefined}
             onClick={() => setTab(item)}
           >
-            {item === "recent" ? "Recently tried" : item}
+            {item === "recent" ? "Captured previews" : item}
           </button>
         ))}
       </div>
@@ -1350,8 +1516,11 @@ function SavedLibrary({
         (tab === "recent" && !recentLooks.length)) && (
         <div className="empty-state">
           <Sparkles />
-          <h2>Room for a new favourite.</h2>
-          <p>Save a look or product and it will stay waiting here.</p>
+          <h2>Your brief starts with one idea.</h2>
+          <p>Browse Maya&apos;s edits, try a look, and add what feels right.</p>
+          <button className="secondary-button" onClick={onBrowse}>
+            Browse Maya&apos;s looks
+          </button>
         </div>
       )}
     </section>
@@ -1466,6 +1635,458 @@ function ProductRow({
   );
 }
 
+function ConsultationSheet({
+  saved,
+  onClose,
+  onSend,
+}: {
+  saved: SavedState;
+  onClose: () => void;
+  onSend: () => void;
+}) {
+  const [serviceId, setServiceId] = useState("occasion");
+  const [name, setName] = useState("Leah Morgan");
+  const [email, setEmail] = useState("leah@example.com");
+  const [eventDate, setEventDate] = useState("");
+  const [notes, setNotes] = useState(
+    "I want something polished and warm, but I still want my skin to look like skin.",
+  );
+  const [consented, setConsented] = useState(false);
+  const selectedLooks = saved.looks
+    .map(lookById)
+    .filter((look): look is Look => Boolean(look));
+  const selectedProducts = saved.products
+    .map(productById)
+    .filter((product): product is Product => Boolean(product));
+
+  return (
+    <BottomSheet title="Send your consultation" onClose={onClose} wide>
+      <div className="consultation-review">
+        <div className="consultation-review-copy">
+          <p className="eyebrow">Private brief for Maya</p>
+          <h2>Give your appointment a better starting point.</h2>
+          <p>
+            Maya will receive your inspiration, selected products, and notes in
+            one place before you meet.
+          </p>
+          <div className="consultation-look-strip">
+            {selectedLooks.slice(0, 4).map((look) => (
+              <Image
+                key={look.id}
+                src={look.image}
+                alt={look.title}
+                width={92}
+                height={118}
+              />
+            ))}
+            <span>
+              <strong>{selectedLooks.length}</strong> looks
+              <small>{selectedProducts.length} products saved</small>
+            </span>
+          </div>
+          <div className="privacy-card">
+            <ShieldCheck />
+            <span>
+              <strong>Shared only with Maya&apos;s studio</strong>
+              <small>
+                Demo images remain on this device. A live service requires
+                explicit image consent and deletion controls.
+              </small>
+            </span>
+          </div>
+        </div>
+        <form
+          className="consultation-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            onSend();
+          }}
+        >
+          <fieldset>
+            <legend>What are you planning?</legend>
+            <div className="service-options">
+              {featuredProfessional.services.map((service) => (
+                <ServiceOption
+                  key={service.id}
+                  service={service}
+                  selected={serviceId === service.id}
+                  onSelect={() => setServiceId(service.id)}
+                />
+              ))}
+            </div>
+          </fieldset>
+          <div className="form-row">
+            <label>
+              Your name
+              <input
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                required
+              />
+            </label>
+            <label>
+              Email
+              <input
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                required
+              />
+            </label>
+          </div>
+          <p className="account-note">
+            No account is needed to browse. These details create a private link
+            so you can return to Maya&apos;s reply.
+          </p>
+          <label>
+            Appointment or occasion date
+            <input
+              type="date"
+              value={eventDate}
+              onChange={(event) => setEventDate(event.target.value)}
+            />
+          </label>
+          <label>
+            What should Maya know?
+            <textarea
+              value={notes}
+              onChange={(event) => setNotes(event.target.value)}
+              rows={4}
+            />
+          </label>
+          <label className="consent-check">
+            <input
+              type="checkbox"
+              checked={consented}
+              onChange={(event) => setConsented(event.target.checked)}
+            />
+            <span>
+              I consent to sharing this brief and its selected images with Maya
+              Clarke Skin &amp; Beauty for consultation purposes.
+            </span>
+          </label>
+          <button
+            className="primary-button consultation-send"
+            type="submit"
+            disabled={!consented || !name || !email}
+          >
+            <Send />
+            Send securely to Maya
+          </button>
+          <p className="affiliate-note">
+            Maya may recommend products using disclosed affiliate links. You
+            choose whether to purchase.
+          </p>
+        </form>
+      </div>
+    </BottomSheet>
+  );
+}
+
+function ServiceOption({
+  service,
+  selected,
+  onSelect,
+}: {
+  service: Service;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className={cx("service-option", selected && "active")}
+      onClick={onSelect}
+      aria-pressed={selected}
+    >
+      <span>
+        <strong>{service.name}</strong>
+        <small>{service.duration}</small>
+      </span>
+      <em>{service.price}</em>
+      {selected && <Check />}
+    </button>
+  );
+}
+
+function ProfessionalWorkspace({
+  notify,
+  openProduct,
+  onClientPreview,
+}: {
+  notify: (message: string) => void;
+  openProduct: (product: Product) => void;
+  onClientPreview: () => void;
+}) {
+  const [consultations, setConsultations] =
+    useState<ConsultationBrief[]>(demoConsultations);
+  const [activeId, setActiveId] = useState(demoConsultations[0].id);
+  const [selectedProducts, setSelectedProducts] = useState<string[]>(
+    demoConsultations[0].productIds,
+  );
+  const [recommendationNote, setRecommendationNote] = useState(
+    "I’d keep the base sheer, warm the cheeks, and bring definition through the eyes. These shades will photograph beautifully without feeling heavy.",
+  );
+  const active =
+    consultations.find((consultation) => consultation.id === activeId) ??
+    consultations[0];
+  const activeService =
+    featuredProfessional.services.find(
+      (service) => service.id === active.serviceId,
+    ) ?? featuredProfessional.services[0];
+  const professionalProducts = products.filter((product) =>
+    featuredProfessional.enabledBrands.includes(product.brand),
+  );
+
+  const setStatus = (status: ConsultationStatus) => {
+    setConsultations((current) =>
+      current.map((consultation) =>
+        consultation.id === active.id ? { ...consultation, status } : consultation,
+      ),
+    );
+  };
+
+  const selectConsultation = (consultation: ConsultationBrief) => {
+    setActiveId(consultation.id);
+    setSelectedProducts(consultation.productIds);
+    setRecommendationNote(
+      consultation.serviceId === "skin-consult"
+        ? "I’d simplify the routine first and focus on comfort and consistency. We can review how your skin feels at the appointment."
+        : "I’d keep the finish dimensional and comfortable, then tailor the intensity together at the appointment.",
+    );
+    if (consultation.status === "new") {
+      setConsultations((current) =>
+        current.map((item) =>
+          item.id === consultation.id
+            ? { ...item, status: "reviewing" as const }
+            : item,
+        ),
+      );
+    }
+  };
+
+  return (
+    <section className="professional-workspace">
+      <header className="workspace-header">
+        <div>
+          <p className="eyebrow">Professional workspace · demo</p>
+          <h1>Good morning,<br />Maya.</h1>
+          <p>Turn client inspiration into a confident appointment plan.</p>
+        </div>
+        <div className="workspace-profile">
+          <ProfessionalSignature compact />
+          <button className="secondary-button" onClick={onClientPreview}>
+            View client storefront
+            <ChevronRight />
+          </button>
+        </div>
+      </header>
+
+      <div className="workspace-metrics" aria-label="Practice summary">
+        <article>
+          <Inbox />
+          <span><strong>3</strong> open briefs</span>
+          <small>2 need a response</small>
+        </article>
+        <article>
+          <CalendarDays />
+          <span><strong>7</strong> appointments</span>
+          <small>this week</small>
+        </article>
+        <article>
+          <Link2 />
+          <span><strong>18</strong> product clicks</span>
+          <small>from recommendations</small>
+        </article>
+      </div>
+
+      <div className="workspace-grid">
+        <aside className="consultation-inbox">
+          <div className="inbox-heading">
+            <div>
+              <p className="eyebrow">Consultation inbox</p>
+              <h2>Client briefs</h2>
+            </div>
+            <button
+              className="icon-button outlined"
+              aria-label="Consultation filters"
+              onClick={() => notify("Showing all open consultations")}
+            >
+              <SlidersHorizontal />
+            </button>
+          </div>
+          <div className="inbox-list">
+            {consultations.map((consultation) => {
+              const service =
+                featuredProfessional.services.find(
+                  (item) => item.id === consultation.serviceId,
+                ) ?? featuredProfessional.services[0];
+              return (
+                <button
+                  key={consultation.id}
+                  className={cx(
+                    "inbox-item",
+                    active.id === consultation.id && "active",
+                  )}
+                  onClick={() => selectConsultation(consultation)}
+                >
+                  <span className="client-initials">
+                    {consultation.initials}
+                  </span>
+                  <span className="inbox-copy">
+                    <strong>{consultation.clientName}</strong>
+                    <small>{service.name} · {consultation.eventDate}</small>
+                    <em>{consultation.note}</em>
+                  </span>
+                  <span className={cx("status-pill", `status-${consultation.status.replace(" ", "-")}`)}>
+                    {consultation.status}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </aside>
+
+        <article className="consultation-detail">
+          <header className="consultation-detail-head">
+            <div>
+              <p className="eyebrow">{active.id} · {active.source}</p>
+              <h2>{active.clientName}</h2>
+              <span>{activeService.name} · {active.eventDate}</span>
+            </div>
+            <span className={cx("status-pill", `status-${active.status.replace(" ", "-")}`)}>
+              {active.status}
+            </span>
+          </header>
+
+          <div className="client-note">
+            <MessageCircle />
+            <p>“{active.note}”</p>
+          </div>
+
+          <section className="client-inspiration">
+            <div className="section-title">
+              <div>
+                <p className="eyebrow">Client inspiration</p>
+                <h3>{active.lookIds.length} looks in the brief</h3>
+              </div>
+              <span><Clock3 /> Sent {active.submittedAt}</span>
+            </div>
+            <div className="client-look-grid">
+              {active.lookIds.map((lookId) => {
+                const look = lookById(lookId);
+                if (!look) return null;
+                return (
+                  <div key={look.id}>
+                    <Image
+                      src={look.image}
+                      alt={look.title}
+                      fill
+                      sizes="(max-width: 767px) 46vw, 240px"
+                    />
+                    <span>{look.title}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
+          <section className="recommendation-builder">
+            <div className="section-title">
+              <div>
+                <p className="eyebrow">Recommendation builder</p>
+                <h3>Shape Maya&apos;s edit</h3>
+              </div>
+              <button
+                className="text-button"
+                onClick={() => notify("Brand catalog settings previewed")}
+              >
+                <SettingsLabel />
+              </button>
+            </div>
+            <div className="enabled-brands">
+              <span>Enabled brands</span>
+              {featuredProfessional.enabledBrands.map((brand) => (
+                <em key={brand}>{brand}</em>
+              ))}
+            </div>
+            <div className="recommendation-products">
+              {professionalProducts.slice(0, 8).map((product) => {
+                const selected = selectedProducts.includes(product.id);
+                return (
+                  <button
+                    key={product.id}
+                    className={selected ? "active" : undefined}
+                    onClick={() =>
+                      setSelectedProducts((current) =>
+                        selected
+                          ? current.filter((id) => id !== product.id)
+                          : [...current, product.id],
+                      )
+                    }
+                    aria-pressed={selected}
+                  >
+                    <span style={{ background: product.shadeColor }} />
+                    <strong>{product.name}</strong>
+                    <small>{product.brand} · £{product.price}</small>
+                    {selected && <Check />}
+                  </button>
+                );
+              })}
+            </div>
+            <label>
+              Note to {active.clientName.split(" ")[0]}
+              <textarea
+                value={recommendationNote}
+                onChange={(event) => setRecommendationNote(event.target.value)}
+                rows={4}
+              />
+            </label>
+            <div className="recommendation-actions">
+              <button
+                className="secondary-button"
+                onClick={() => {
+                  const first = selectedProducts
+                    .map(productById)
+                    .find((product): product is Product => Boolean(product));
+                  if (first) openProduct(first);
+                  else notify("Choose a product to preview");
+                }}
+              >
+                Preview client view
+              </button>
+              <button
+                className="primary-button"
+                disabled={!selectedProducts.length}
+                onClick={() => {
+                  setStatus("recommendation sent");
+                  notify(`Recommendation sent to ${active.clientName}`);
+                }}
+              >
+                <Send />
+                Send recommendation
+              </button>
+            </div>
+            <p className="affiliate-note">
+              Affiliate disclosure is attached automatically to every
+              shoppable recommendation. Commission tracking is mocked.
+            </p>
+          </section>
+        </article>
+      </div>
+    </section>
+  );
+}
+
+function SettingsLabel() {
+  return (
+    <>
+      Manage catalog
+      <ChevronRight />
+    </>
+  );
+}
+
 function ProductSheet({
   product,
   saved,
@@ -1566,6 +2187,20 @@ function ProductSheet({
               <ChevronRight />
             </button>
           )}
+          <div className="professional-recommendation">
+            <Image
+              src={featuredProfessional.image}
+              alt=""
+              width={42}
+              height={42}
+              style={{ width: 42, height: 42 }}
+            />
+            <span>
+              <small>Available from Maya&apos;s preferred catalog</small>
+              <strong>{featuredProfessional.studioName}</strong>
+            </span>
+            <BadgeCheck />
+          </div>
           <div className="product-detail-actions">
             <button className="secondary-button" onClick={onTry}>
               <WandSparkles />
@@ -1573,12 +2208,12 @@ function ProductSheet({
             </button>
             <button className="primary-button" onClick={onShop}>
               <ShoppingBag />
-              Shop product · £{product.price}
+              Shop Maya&apos;s pick · £{product.price}
             </button>
           </div>
           <p className="affiliate-note">
-            Demo affiliate link. The recommending creator may earn a commission
-            from a future purchase, at no extra cost to you.
+            Demo affiliate link. Maya may earn a commission from a future
+            purchase, at no extra cost to you.
           </p>
         </div>
       </div>
@@ -1662,9 +2297,30 @@ function BottomSheet({
   wide?: boolean;
   children: ReactNode;
 }) {
+  const dialogRef = useRef<HTMLElement>(null);
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") {
+        onClose();
+        return;
+      }
+      if (event.key !== "Tab") return;
+
+      const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), [href], input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      );
+      if (!focusable?.length) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
@@ -1672,12 +2328,13 @@ function BottomSheet({
 
   return (
     <div className="sheet-layer" role="presentation">
-      <button
+      <div
         className="sheet-backdrop"
         onClick={onClose}
-        aria-label="Close dialog"
+        aria-hidden="true"
       />
       <section
+        ref={dialogRef}
         className={cx("bottom-sheet", wide && "bottom-sheet-wide")}
         role="dialog"
         aria-modal="true"
@@ -1750,7 +2407,7 @@ function Onboarding({
         <h1>{item.title}</h1>
         <p>{item.copy}</p>
         <button className="primary-button" onClick={onNext}>
-          {step === onboarding.length - 1 ? "Open my studio" : "Continue"}
+          {step === onboarding.length - 1 ? "Enter Maya's studio" : "Continue"}
           <ArrowRight />
         </button>
         <span className="privacy-note">
