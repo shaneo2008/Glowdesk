@@ -523,6 +523,7 @@ function CameraExperience({
     const file = event.target.files?.[0];
     if (!file) return;
     stopCamera();
+    setCameraError("");
     setUploadedImage(URL.createObjectURL(file));
     runAnalysis(() => undefined);
   };
