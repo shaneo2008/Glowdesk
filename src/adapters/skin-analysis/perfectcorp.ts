@@ -22,7 +22,8 @@ export class PerfectCorpProvider implements SkinAnalysisProvider {
     if (!this.apiKey) throw new Error("PERFECTCORP_API_KEY is not set");
   }
 
-  async analyze(_input: AnalyzeInput): Promise<SkinAnalysisResult> {
+  async analyze(input: AnalyzeInput): Promise<SkinAnalysisResult> {
+    void input;
     // TODO(M0): implement against YouCam AI API skin-analysis endpoint.
     throw new Error("Not implemented — see docs/ORCHESTRATION.md M0");
   }
