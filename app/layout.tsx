@@ -19,9 +19,9 @@ const mono = Spline_Sans_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Glowdesk — Try the look",
+  title: "Glowdesk — Visual beauty consultations",
   description:
-    "A camera-first beauty discovery studio for trying creator-made looks and exploring products.",
+    "A professional-led beauty consultation studio for trying looks, sharing visual briefs, and exploring recommended products.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
